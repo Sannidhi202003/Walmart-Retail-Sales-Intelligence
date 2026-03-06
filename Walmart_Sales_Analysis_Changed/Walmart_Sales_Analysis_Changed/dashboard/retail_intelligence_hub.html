@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Walmart Retail Intelligence Hub</title>
+<script src="https://cdn.plot.ly/plotly-2.26.1.min.js"></script>
+<style>
+  :root {
+    --navy:    #0d1b2a;
+    --panel:   #112240;
+    --card:    #1a2f4e;
+    --accent1: #00d4aa;
+    --accent2: #4fc3f7;
+    --accent3: #f9a825;
+    --accent4: #ef5350;
+    --accent5: #ab47bc;
+    --text:    #e0f2fe;
+    --muted:   #90a4ae;
+    --border:  #1e3a5f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--navy); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, #0d1b2a 0%, #112240 50%, #0a3d62 100%);
+    border-bottom: 2px solid var(--accent1);
+    padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo-box {
+    background: var(--accent1); color: #000; font-weight: 900;
+    font-size: 22px; padding: 8px 14px; border-radius: 8px; letter-spacing: 1px;
+  }
+  .header-title h1 { font-size: 22px; font-weight: 700; color: var(--accent1); }
+  .header-title p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; }
+  .live-badge {
+    background: var(--accent1); color: #000; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px; margin-bottom: 4px;
+  }
+  .upload-wrap { display: flex; align-items: center; gap: 10px; }
+  .upload-wrap label {
+    background: var(--accent2); color: #000; padding: 7px 16px; border-radius: 6px;
+    cursor: pointer; font-size: 13px; font-weight: 600; transition: opacity .2s;
+  }
+  .upload-wrap label:hover { opacity: .85; }
+  .upload-wrap input { display: none; }
+  #file-name { font-size: 12px; color: var(--muted); }
+
+  /* ── MAIN ── */
+  .main { padding: 24px 28px; }
+
+  /* ── KPI STRIP ── */
+  .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 24px; }
+  .kpi-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 16px; position: relative; overflow: hidden;
+    transition: transform .2s;
+  }
+  .kpi-card:hover { transform: translateY(-3px); }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 4px; height: 100%; background: var(--kpi-color, var(--accent1));
+  }
+  .kpi-icon { font-size: 28px; margin-bottom: 8px; }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .kpi-value { font-size: 26px; font-weight: 800; color: var(--kpi-color, var(--accent1)); }
+  .kpi-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .kpi-glow  { position: absolute; top: 8px; right: 12px; font-size: 32px; opacity: .07; }
+
+  /* ── GRID LAYOUTS ── */
+  .row { display: grid; gap: 18px; margin-bottom: 18px; }
+  .row-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .row-2 { grid-template-columns: 2fr 1fr; }
+  .row-2b{ grid-template-columns: 1fr 1fr; }
+  .row-full { grid-template-columns: 1fr; }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px; min-height: 320px;
+  }
+  .panel-title {
+    font-size: 13px; font-weight: 700; color: var(--accent1);
+    text-transform: uppercase; letter-spacing: 1px;
+    border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-title span { font-size: 16px; }
+  .chart-box { width: 100%; height: 280px; }
+  .chart-box-tall { width: 100%; height: 340px; }
+
+  /* ── TABLE ── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th {
+    background: var(--card); color: var(--accent2);
+    padding: 9px 12px; text-align: left; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border);
+  }
+  .data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .data-table tr:hover td { background: rgba(0,212,170,.05); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    font-size: 10px; font-weight: 700;
+  }
+  .badge-green  { background: rgba(0,212,170,.15); color: var(--accent1); }
+  .badge-blue   { background: rgba(79,195,247,.15); color: var(--accent2); }
+  .badge-yellow { background: rgba(249,168,37,.15);  color: var(--accent3); }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center; padding: 16px; color: var(--muted);
+    font-size: 11px; border-top: 1px solid var(--border);
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: 260px; color: var(--muted);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: .4; }
+  .empty-state p { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- ════════════ HEADER ════════════ -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo-box">WM</div>
+    <div class="header-title">
+      <h1>Retail Intelligence Hub</h1>
+      <p>Walmart Sales Analytics · Multi-Branch Performance Dashboard</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge">● INTERACTIVE</div>
+    <div class="upload-wrap">
+      <label for="json-upload">📂 Load Data (JSON)</label>
+      <input type="file" id="json-upload" accept=".json"/>
+      <span id="file-name">No file loaded</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ MAIN ════════════ -->
+<div class="main">
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi-card" style="--kpi-color:#00d4aa">
+      <div class="kpi-glow">💰</div>
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value" id="kpi-revenue">—</div>
+      <div class="kpi-sub">All branches combined</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#4fc3f7">
+      <div class="kpi-glow">🧾</div>
+      <div class="kpi-icon">🧾</div>
+      <div class="kpi-label">Transactions</div>
+      <div class="kpi-value" id="kpi-txn">—</div>
+      <div class="kpi-sub">Total invoices</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#f9a825">
+      <div class="kpi-glow">⭐</div>
+      <div class="kpi-icon">⭐</div>
+      <div class="kpi-label">Avg Rating</div>
+      <div class="kpi-value" id="kpi-rating">—</div>
+      <div class="kpi-sub">Customer satisfaction</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#ab47bc">
+      <div class="kpi-glow">📦</div>
+      <div class="kpi-icon">📦</div>
+      <div class="kpi-label">Items Sold</div>
+      <div class="kpi-value" id="kpi-items">—</div>
+      <div class="kpi-sub">Total units</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#ef5350">
+      <div class="kpi-glow">🏪</div>
+      <div class="kpi-icon">🏪</div>
+      <div class="kpi-label">Avg Ticket</div>
+      <div class="kpi-value" id="kpi-avg">—</div>
+      <div class="kpi-sub">Per transaction</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Revenue by Category (horizontal bar) + Donut Payment + Shift Polar -->
+  <div class="row row-3">
+    <div class="panel">
+      <div class="panel-title"><span>📊</span> Revenue by Product Category</div>
+      <div id="chart-category" class="chart-box"><div class="empty-state"><div class="icon">📂</div><p>Load JSON data to view chart</p></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span>💳</span> Payment Method Split</div>
+      <div id="chart-payment" class="chart-box"><div class="empty-state"><div class="icon">📂</div><p>Load JSON data to view chart</p></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span>🕐</span> Sales by Day Shift</div>
+      <div id="chart-shift" class="chart-box"><div class="empty-state"><div class="icon">📂</div><p>Load JSON data to view chart</p></div></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Time Series + Heatmap -->
+  <div class="row row-2">
+    <div class="panel">
+      <div class="panel-title"><span>📈</span> Daily Revenue Trend (with 7-day Rolling Avg)</div>
+      <div id="chart-trend" class="chart-box-tall"><div class="empty-state"><div class="icon">📂</div><p>Load JSON data to view chart</p></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span>🕑</span> Hourly Transaction Heatmap</div>
+      <div id="chart-hour" class="chart-box-tall"><div class="empty-state"><div class="icon">📂</div><p>Load JSON data to view chart</p></div></div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Branch Scatter + Rating Box -->
+  <div class="row row-2b">
+    <div class="panel">
+      <div class="panel-title"><span>🏪</span> Branch: Revenue vs Profit Bubble Chart</div>
+      <div id="chart-branch" class="chart-box-tall"><div class="empty-state"><div class="icon">📂</div><p>Load JSON data to view chart</p></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span>⭐</span> Rating Distribution by Category</div>
+      <div id="chart-rating" class="chart-box-tall"><div class="empty-state"><div class="icon">📂</div><p>Load JSON data to view chart</p></div></div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Top Cities Table + Monthly Heatmap -->
+  <div class="row row-2b">
+    <div class="panel">
+      <div class="panel-title"><span>🏙️</span> Top Cities by Revenue</div>
+      <div id="chart-city" class="chart-box"><div class="empty-state"><div class="icon">📂</div><p>Load JSON data to view chart</p></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span>📅</span> Monthly Revenue by Category (Heatmap)</div>
+      <div id="chart-heatmap" class="chart-box"><div class="empty-state"><div class="icon">📂</div><p>Load JSON data to view chart</p></div></div>
+    </div>
+  </div>
+
+</div><!-- end .main -->
+
+<div class="footer">Walmart Retail Intelligence Hub · Built with Plotly.js · Data: Walmart Transactions Dataset</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// GLOBAL PLOTLY LAYOUT DEFAULTS
+// ════════════════════════════════════════════════════════════════
+const BG        = '#112240';
+const PAPER_BG  = '#112240';
+const FONT_CLR  = '#e0f2fe';
+const GRID_CLR  = '#1e3a5f';
+const ACCENT    = ['#00d4aa','#4fc3f7','#f9a825','#ab47bc','#ef5350','#66bb6a','#ff7043','#26c6da'];
+
+const BASE_LAYOUT = {
+  paper_bgcolor: PAPER_BG,
+  plot_bgcolor:  BG,
+  font:  { color: FONT_CLR, family: 'Segoe UI, sans-serif', size: 11 },
+  margin:{ t: 10, b: 40, l: 10, r: 10 },
+  xaxis: { gridcolor: GRID_CLR, zerolinecolor: GRID_CLR },
+  yaxis: { gridcolor: GRID_CLR, zerolinecolor: GRID_CLR },
+  legend:{ bgcolor: 'rgba(0,0,0,0)', font:{ color: FONT_CLR, size: 10 } },
+  hoverlabel: { bgcolor: '#0d1b2a', font:{ color: '#fff' } },
+};
+const CFG = { responsive: true, displayModeBar: false };
+
+// ════════════════════════════════════════════════════════════════
+// FILE UPLOAD
+// ════════════════════════════════════════════════════════════════
+document.getElementById('json-upload').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('file-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      renderAll(data);
+    } catch(err) {
+      alert('Invalid JSON file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+// ════════════════════════════════════════════════════════════════
+// UTILITIES
+// ════════════════════════════════════════════════════════════════
+const fmtCurrency = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+const fmtK = n => n >= 1000 ? (n/1000).toFixed(1)+'K' : n.toString();
+
+function groupSum(data, key, valKey) {
+  const out = {};
+  data.forEach(r => { out[r[key]] = (out[r[key]] || 0) + r[valKey]; });
+  return out;
+}
+function groupCount(data, key) {
+  const out = {};
+  data.forEach(r => { out[r[key]] = (out[r[key]] || 0) + 1; });
+  return out;
+}
+function groupAvg(data, key, valKey) {
+  const sums = {}, cnts = {};
+  data.forEach(r => {
+    sums[r[key]] = (sums[r[key]] || 0) + r[valKey];
+    cnts[r[key]] = (cnts[r[key]] || 0) + 1;
+  });
+  const out = {};
+  Object.keys(sums).forEach(k => out[k] = sums[k] / cnts[k]);
+  return out;
+}
+
+function parseDate(str) {
+  const parts = str.split('/');
+  if (parts.length !== 3) return null;
+  const [d, m, y] = parts;
+  return new Date(`20${y}-${m}-${d}`);
+}
+function getHour(timeStr) { return parseInt((timeStr||'0').split(':')[0]); }
+function getShift(h) { return h < 12 ? 'Morning' : h < 18 ? 'Afternoon' : 'Evening'; }
+
+// ════════════════════════════════════════════════════════════════
+// RENDER ALL
+// ════════════════════════════════════════════════════════════════
+function renderAll(data) {
+
+  // ── Enrich data
+  data.forEach(r => {
+    r._date  = parseDate(r.date);
+    r._hour  = getHour(r.time);
+    r._shift = getShift(r._hour);
+    r._profit = r.total * (r.profit_margin || 0);
+    r._month = r._date ? r._date.toLocaleString('en-US',{month:'short'}) : 'Unknown';
+  });
+
+  // ── KPIs
+  const totalRev  = data.reduce((s,r)=>s+r.total, 0);
+  const totalItems= data.reduce((s,r)=>s+r.quantity, 0);
+  const avgRating = data.reduce((s,r)=>s+r.rating, 0) / data.length;
+  const avgTicket = totalRev / data.length;
+
+  document.getElementById('kpi-revenue').textContent = fmtCurrency(totalRev);
+  document.getElementById('kpi-txn').textContent     = data.length.toLocaleString();
+  document.getElementById('kpi-rating').textContent  = avgRating.toFixed(2);
+  document.getElementById('kpi-items').textContent   = fmtK(totalItems);
+  document.getElementById('kpi-avg').textContent     = fmtCurrency(avgTicket);
+
+  renderCategory(data);
+  renderPayment(data);
+  renderShift(data);
+  renderTrend(data);
+  renderHour(data);
+  renderBranch(data);
+  renderRating(data);
+  renderCity(data);
+  renderHeatmap(data);
+}
+
+// ════════════════════════════════════════════════════════════════
+// CHART 1 — Horizontal Bar: Revenue by Category
+// ════════════════════════════════════════════════════════════════
+function renderCategory(data) {
+  const sums = groupSum(data, 'category', 'total');
+  const pairs = Object.entries(sums).sort((a,b)=>a[1]-b[1]);
+  const cats  = pairs.map(p=>p[0]);
+  const vals  = pairs.map(p=>p[1]);
+
+  const trace = {
+    type: 'bar', orientation: 'h',
+    x: vals, y: cats,
+    marker: {
+      color: vals,
+      colorscale: [[0,'#1a2f4e'],[0.5,'#00d4aa'],[1,'#f9a825']],
+      showscale: false,
+    },
+    text: vals.map(v=>'$'+v.toLocaleString('en-US',{maximumFractionDigits:0})),
+    textposition: 'outside', textfont:{ color:FONT_CLR, size:10 },
+    hovertemplate: '<b>%{y}</b><br>Revenue: $%{x:,.0f}<extra></extra>',
+  };
+
+  const layout = {
+    ...BASE_LAYOUT,
+    margin:{ t:10, b:30, l:130, r:70 },
+    xaxis:{ ...BASE_LAYOUT.xaxis, tickformat:'$,.0f' },
+    yaxis:{ ...BASE_LAYOUT.yaxis, automargin:true },
+  };
+  Plotly.newPlot('chart-category', [trace], layout, CFG);
+}
+
+// ════════════════════════════════════════════════════════════════
+// CHART 2 — Donut: Payment Methods
+// ════════════════════════════════════════════════════════════════
+function renderPayment(data) {
+  const sums = groupSum(data, 'payment_method', 'total');
+  const labels = Object.keys(sums);
+  const values = Object.values(sums);
+
+  const trace = {
+    type: 'pie', hole: 0.55,
+    labels, values,
+    marker: { colors: ['#00d4aa','#4fc3f7','#f9a825'], line:{ color: BG, width:3 } },
+    textinfo: 'label+percent',
+    textfont: { color: FONT_CLR, size: 11 },
+    hovertemplate: '<b>%{label}</b><br>$%{value:,.0f} (%{percent})<extra></extra>',
+  };
+
+  const layout = {
+    ...BASE_LAYOUT,
+    margin:{ t:10, b:10, l:10, r:10 },
+    showlegend: true,
+    legend:{ orientation:'v', x:1, y:.5, font:{ color:FONT_CLR, size:10 } },
+    annotations:[{
+      text:'Payment<br>Split', x:.5, y:.5,
+      showarrow:false, font:{ color:FONT_CLR, size:12 }
+    }]
+  };
+  Plotly.newPlot('chart-payment', [trace], layout, CFG);
+}
+
+// ════════════════════════════════════════════════════════════════
+// CHART 3 — Polar / Radial: Day Shift Distribution
+// ════════════════════════════════════════════════════════════════
+function renderShift(data) {
+  const shiftRev = groupSum(data, '_shift', 'total');
+  const shiftCnt = groupCount(data, '_shift');
+  const shifts   = ['Morning','Afternoon','Evening'];
+  const revVals  = shifts.map(s => shiftRev[s] || 0);
+  const cntVals  = shifts.map(s => shiftCnt[s] || 0);
+
+  const traceRev = {
+    type: 'scatterpolar', fill:'toself', name:'Revenue',
+    r: [...revVals, revVals[0]],
+    theta: [...shifts, shifts[0]],
+    line: { color:'#00d4aa', width:2 },
+    fillcolor:'rgba(0,212,170,0.15)',
+    hovertemplate: '<b>%{theta}</b><br>Revenue: $%{r:,.0f}<extra></extra>',
+  };
+  const traceCnt = {
+    type: 'scatterpolar', fill:'toself', name:'Transactions',
+    r: [...cntVals.map(v=>v*50), cntVals[0]*50],
+    theta: [...shifts, shifts[0]],
+    line: { color:'#f9a825', width:2 },
+    fillcolor:'rgba(249,168,37,0.12)',
+    hovertemplate: '<b>%{theta}</b><br>Transactions (×50): %{r}<extra></extra>',
+  };
+
+  const layout = {
+    ...BASE_LAYOUT,
+    polar:{
+      bgcolor: BG,
+      radialaxis:{ visible:true, color: GRID_CLR, gridcolor:GRID_CLR, tickfont:{color:FONT_CLR, size:9} },
+      angularaxis:{ color: FONT_CLR, tickfont:{color:FONT_CLR, size:11} },
+    },
+    showlegend:true,
+    margin:{ t:20, b:20, l:20, r:20 },
+  };
+  Plotly.newPlot('chart-shift', [traceRev, traceCnt], layout, CFG);
+}
+
+// ════════════════════════════════════════════════════════════════
+// CHART 4 — Line + Area: Daily Revenue Trend + Rolling Avg
+// ════════════════════════════════════════════════════════════════
+function renderTrend(data) {
+  const daily = {};
+  data.forEach(r => {
+    if (!r._date) return;
+    const key = r._date.toISOString().split('T')[0];
+    daily[key] = (daily[key] || 0) + r.total;
+  });
+  const dates  = Object.keys(daily).sort();
+  const values = dates.map(d => daily[d]);
+
+  // 7-day rolling average
+  const rolling = values.map((_, i) => {
+    const start = Math.max(0, i-6);
+    const slice = values.slice(start, i+1);
+    return slice.reduce((a,b)=>a+b,0) / slice.length;
+  });
+
+  const traceArea = {
+    type:'scatter', mode:'none', fill:'tozeroy',
+    x: dates, y: values, name:'Daily Revenue',
+    fillcolor:'rgba(0,212,170,0.12)',
+    hovertemplate:'%{x}<br>$%{y:,.0f}<extra>Daily</extra>',
+  };
+  const traceLine = {
+    type:'scatter', mode:'lines',
+    x: dates, y: values, name:'Daily Revenue',
+    line:{ color:'#00d4aa', width:1 },
+    hoverinfo:'skip',
+  };
+  const traceRoll = {
+    type:'scatter', mode:'lines',
+    x: dates, y: rolling, name:'7-Day Avg',
+    line:{ color:'#f9a825', width:2.5, dash:'dot' },
+    hovertemplate:'%{x}<br>Avg: $%{y:,.0f}<extra>7-Day Avg</extra>',
+  };
+
+  const layout = {
+    ...BASE_LAYOUT,
+    margin:{ t:10, b:50, l:60, r:10 },
+    xaxis:{ ...BASE_LAYOUT.xaxis, tickangle:-35, tickfont:{size:9}, nticks:12 },
+    yaxis:{ ...BASE_LAYOUT.yaxis, tickformat:'$,.0f' },
+    showlegend:true,
+  };
+  Plotly.newPlot('chart-trend', [traceArea, traceLine, traceRoll], layout, CFG);
+}
+
+// ════════════════════════════════════════════════════════════════
+// CHART 5 — Bar: Hourly Transaction Count
+// ════════════════════════════════════════════════════════════════
+function renderHour(data) {
+  const hourCnt = {};
+  const hourRev = {};
+  data.forEach(r => {
+    hourCnt[r._hour] = (hourCnt[r._hour] || 0) + 1;
+    hourRev[r._hour] = (hourRev[r._hour] || 0) + r.total;
+  });
+  const hours = Array.from({length:24}, (_,i)=>i).filter(h => hourCnt[h]);
+  const counts = hours.map(h=>hourCnt[h]||0);
+  const revs   = hours.map(h=>hourRev[h]||0);
+
+  const traceBars = {
+    type:'bar', x:hours, y:counts, name:'Transactions',
+    marker:{ color: counts, colorscale:[[0,'#1a2f4e'],[0.5,'#4fc3f7'],[1,'#ab47bc']], showscale:false },
+    hovertemplate:'Hour %{x}:00<br>Transactions: %{y}<extra></extra>',
+  };
+
+  const layout = {
+    ...BASE_LAYOUT,
+    margin:{ t:10, b:40, l:50, r:10 },
+    xaxis:{ ...BASE_LAYOUT.xaxis, title:'Hour of Day', tickvals:hours, ticktext:hours.map(h=>h+':00'), tickangle:-45, tickfont:{size:9} },
+    yaxis:{ ...BASE_LAYOUT.yaxis, title:'Transactions' },
+    bargap:0.15,
+  };
+  Plotly.newPlot('chart-hour', [traceBars], layout, CFG);
+}
+
+// ════════════════════════════════════════════════════════════════
+// CHART 6 — Bubble: Branch Revenue vs Profit
+// ════════════════════════════════════════════════════════════════
+function renderBranch(data) {
+  const branchRev = groupSum(data, 'Branch', 'total');
+  const branchPft = groupSum(data, 'Branch', '_profit');
+  const branchCnt = groupCount(data, 'Branch');
+
+  const branches = Object.keys(branchRev);
+  const revs     = branches.map(b=>branchRev[b]);
+  const pfts     = branches.map(b=>branchPft[b]);
+  const cnts     = branches.map(b=>branchCnt[b]);
+
+  const trace = {
+    type:'scatter', mode:'markers',
+    x:revs, y:pfts,
+    marker:{
+      size: cnts.map(c=>Math.sqrt(c)*3+4),
+      color: revs, colorscale:[[0,'#1e3a5f'],[0.5,'#00d4aa'],[1,'#f9a825']],
+      showscale:true, colorbar:{ title:'Revenue', tickformat:'$,.0f', thickness:10, len:.7, tickfont:{color:FONT_CLR,size:8} },
+      opacity:.8, line:{ color:'rgba(255,255,255,0.1)', width:1 }
+    },
+    text: branches,
+    hovertemplate:'<b>%{text}</b><br>Revenue: $%{x:,.0f}<br>Profit: $%{y:,.0f}<extra></extra>',
+  };
+
+  const layout = {
+    ...BASE_LAYOUT,
+    margin:{ t:10, b:50, l:70, r:80 },
+    xaxis:{ ...BASE_LAYOUT.xaxis, title:'Total Revenue', tickformat:'$,.0f' },
+    yaxis:{ ...BASE_LAYOUT.yaxis, title:'Estimated Profit', tickformat:'$,.0f' },
+  };
+  Plotly.newPlot('chart-branch', [trace], layout, CFG);
+}
+
+// ════════════════════════════════════════════════════════════════
+// CHART 7 — Box Plot: Rating by Category
+// ════════════════════════════════════════════════════════════════
+function renderRating(data) {
+  const catData = {};
+  data.forEach(r => {
+    if(!catData[r.category]) catData[r.category]=[];
+    catData[r.category].push(r.rating);
+  });
+
+  const traces = Object.entries(catData).map(([cat, ratings], i) => ({
+    type:'box', name:cat, y:ratings,
+    marker:{ color:ACCENT[i % ACCENT.length] },
+    boxmean:'sd', jitter:0.4, pointpos:0,
+    hovertemplate:`<b>${cat}</b><br>Rating: %{y}<extra></extra>`,
+  }));
+
+  const layout = {
+    ...BASE_LAYOUT,
+    margin:{ t:10, b:80, l:45, r:10 },
+    xaxis:{ ...BASE_LAYOUT.xaxis, tickangle:-25, tickfont:{size:9} },
+    yaxis:{ ...BASE_LAYOUT.yaxis, title:'Rating', range:[0,11] },
+    showlegend:false, boxmode:'group',
+  };
+  Plotly.newPlot('chart-rating', traces, layout, CFG);
+}
+
+// ════════════════════════════════════════════════════════════════
+// CHART 8 — Treemap: Top Cities by Revenue
+// ════════════════════════════════════════════════════════════════
+function renderCity(data) {
+  const sums = groupSum(data, 'City', 'total');
+  const pairs = Object.entries(sums).sort((a,b)=>b[1]-a[1]).slice(0,15);
+
+  const trace = {
+    type:'treemap',
+    labels: pairs.map(p=>p[0]),
+    parents: pairs.map(()=>''),
+    values: pairs.map(p=>p[1]),
+    marker:{
+      colorscale:[[0,'#112240'],[0.4,'#00d4aa'],[1,'#f9a825']],
+      color: pairs.map(p=>p[1]), showscale:false,
+    },
+    textfont:{ color:'#fff', size:11 },
+    hovertemplate:'<b>%{label}</b><br>Revenue: $%{value:,.0f}<extra></extra>',
+  };
+
+  const layout = {
+    ...BASE_LAYOUT,
+    margin:{ t:5, b:5, l:5, r:5 },
+  };
+  Plotly.newPlot('chart-city', [trace], layout, CFG);
+}
+
+// ════════════════════════════════════════════════════════════════
+// CHART 9 — Heatmap: Monthly Revenue by Category
+// ════════════════════════════════════════════════════════════════
+function renderHeatmap(data) {
+  const MONTH_ORDER = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const cats   = [...new Set(data.map(r=>r.category))].sort();
+  const matrix = cats.map(cat =>
+    MONTH_ORDER.map(mon => {
+      const filtered = data.filter(r=>r.category===cat && r._month===mon);
+      return filtered.reduce((s,r)=>s+r.total, 0);
+    })
+  );
+
+  const trace = {
+    type:'heatmap',
+    z: matrix, x: MONTH_ORDER, y: cats,
+    colorscale:[[0,'#0d1b2a'],[0.3,'#1e3a5f'],[0.6,'#00d4aa'],[1,'#f9a825']],
+    hovertemplate:'<b>%{y}</b> — %{x}<br>Revenue: $%{z:,.0f}<extra></extra>',
+    showscale:true,
+    colorbar:{ thickness:12, len:.8, tickformat:'$,.0f', tickfont:{color:FONT_CLR, size:8} },
+  };
+
+  const layout = {
+    ...BASE_LAYOUT,
+    margin:{ t:10, b:40, l:130, r:70 },
+    xaxis:{ ...BASE_LAYOUT.xaxis, side:'bottom' },
+    yaxis:{ ...BASE_LAYOUT.yaxis, automargin:true },
+  };
+  Plotly.newPlot('chart-heatmap', [trace], layout, CFG);
+}
+</script>
+</body>
+</html>
